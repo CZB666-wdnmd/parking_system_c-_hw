@@ -70,15 +70,18 @@
 
 ```bash
 # 1. 克隆仓库
-# git clone [https://github.com/CZB666-wdnmd/parking_system_c-_hw.git](https://github.com/CZB666-wdnmd/parking_system_c-_hw.git)
-# cd parking_system_c-_hw
+git clone [https://github.com/CZB666-wdnmd/parking_system_c-_hw.git](https://github.com/CZB666-wdnmd/parking_system_c-_hw.git)
+cd parking_system_c-_hw
 
 # 2. 创建构建目录
 mkdir build
 cd build
 
 # 3. 运行 CMake 配置
-#    确保已安装所有依赖 (OpenSSL, libcurl, PkgConfig, OpenCV, Tesseract)
+#    确保已安装所有依赖 (OpenSSL, libcurl, OpenCV, Tesseract)
+sudo apt update
+sudo apt install -y build-essential cmake libssl-dev libcurl4-openssl-dev libopencv-dev tesseract-ocr
+
 cmake ..
 
 # 4. 编译项目
