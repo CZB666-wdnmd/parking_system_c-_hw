@@ -1,0 +1,17 @@
+[
+    {
+        "username": "admin",
+        "role": "admin",
+        "auth": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+    },
+    {
+        "username": "user",
+        "role": "user",
+        "auth": "f2ca1bb6c7e907d06dafe4687e579fce9a58f25f6f0c6c190c8b7dc0c8164d87"
+    },
+    {
+        "username": "bot0",
+        "role": "bot",
+        "auth": "bot_token_example"
+    }
+]

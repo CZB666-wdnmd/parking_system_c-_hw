@@ -3,31 +3,18 @@ project(parking_system)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# 添加靜態鏈接標誌
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+set(CURL_USE_STATIC_LIBS TRUE)
 set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")
+
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}")
+include(CPack)
 
 find_package(OpenSSL REQUIRED)
 find_package(CURL REQUIRED)
 
-# 靜態鏈接 OpenSSL 和 CURL
-set(OPENSSL_USE_STATIC_LIBS TRUE)
-set(CURL_USE_STATIC_LIBS TRUE)
-
-add_executable(parking_system_server
-    src/main.cpp
-    src/auth.cpp
-    src/database.cpp
-    src/logger.cpp
-    src/vehicle.cpp
-    src/utils.cpp
-)
-
-target_include_directories(parking_system_server
-    PRIVATE include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
+# Json
 include(FetchContent)
 
 FetchContent_Declare(
@@ -38,13 +25,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(nlohmann_json)
 
-target_link_libraries(parking_system_server
-    PRIVATE OpenSSL::SSL
-    PRIVATE OpenSSL::Crypto
-    PRIVATE pthread
-    PRIVATE nlohmann_json::nlohmann_json
-)
-
+# http server
 set(HTTPLIB_DOWNLOAD_DIR "${CMAKE_BINARY_DIR}/external")
 file(MAKE_DIRECTORY ${HTTPLIB_DOWNLOAD_DIR})
 set(HTTPLIB_PATH "${HTTPLIB_DOWNLOAD_DIR}/httplib.h")
@@ -61,18 +42,31 @@ if(NOT EXISTS ${HTTPLIB_PATH})
     endif()
 endif()
 
-FetchContent_Declare(
-  ftxui
-  GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI
-  GIT_TAG        origin/main
+# Server
+add_executable(parking_system_server
+    src/main.cpp
+    src/auth.cpp
+    src/database.cpp
+    src/logger.cpp
+    src/vehicle.cpp
+    src/utils.cpp
 )
 
-FetchContent_MakeAvailable(ftxui)
-
 target_include_directories(parking_system_server
+    PRIVATE include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE ${HTTPLIB_DOWNLOAD_DIR}
 )
 
+target_link_libraries(parking_system_server
+    PRIVATE OpenSSL::SSL
+    PRIVATE OpenSSL::Crypto
+    PRIVATE pthread
+    PRIVATE nlohmann_json::nlohmann_json
+)
+
+
+# Client
 add_executable(parking_system_client
     src/client.cpp
 )
@@ -85,8 +79,27 @@ target_link_libraries(parking_system_client
   PRIVATE
     pthread
     CURL::libcurl
-    ftxui::screen
-    ftxui::dom
-    ftxui::component
     nlohmann_json::nlohmann_json
 )
+
+# Bot
+find_package(OpenCV REQUIRED)
+include_directories(${OpenCV_INCLUDE_DIRS})
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(TESSERACT REQUIRED tesseract)
+include_directories(${TESSERACT_INCLUDE_DIRS})
+link_directories(${TESSERACT_LIBRARY_DIRS})
+
+add_executable(parking_system_bot src/bot.cpp)
+
+target_link_libraries(parking_system_bot
+    ${OpenCV_LIBS}
+    ${TESSERACT_LIBRARIES}
+    CURL::libcurl
+    nlohmann_json::nlohmann_json
+)
+
+install(TARGETS parking_system_server parking_system_client parking_system_bot
+    RUNTIME DESTINATION .)
+
+install(DIRECTORY configs/ DESTINATION .)

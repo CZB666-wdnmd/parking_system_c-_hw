@@ -6,9 +6,14 @@
 #include <nlohmann/json.hpp>
 #include "../include/utils.hpp"
 
+#include <iostream>
 using json = nlohmann::json;
 
 void setupRoutes(httplib::Server& svr) {
+    // 状态检测
+    svr.Get("/api/alive", [](const httplib::Request&, httplib::Response& res) {
+        res.set_content(R"({"status": "ok"})", "application/json");
+    });
     // 用户登录
     svr.Post("/api/auth/login", [](const httplib::Request& req, httplib::Response& res) {
         try {
@@ -31,6 +36,7 @@ void setupRoutes(httplib::Server& svr) {
         }
     });
 
+    // 退出登入
     svr.Post("/api/auth/logout", [](const httplib::Request& req, httplib::Response& res) {
         try {
             auto body = json::parse(req.body);
@@ -120,8 +126,20 @@ void setupRoutes(httplib::Server& svr) {
 
         std::string plate = req.matches[1];
         auto vehicles = Database::getInstance().getVehicles();
+        double fee;
+        std::string duration, msg;
+        std::string time = utils::getCurrentTimeISO();
+        json vehicle_info;
         if (vehicles.contains(plate)) {
-            res.set_content(vehicles[plate].dump(), "application/json");
+            vehicle_info = vehicles[plate];
+            if (VehicleManager::getDuration(plate, time, duration, fee, msg)) {
+                vehicle_info["duration"] = duration;
+                vehicle_info["fee"] = fee;
+                res.set_content(vehicle_info.dump(), "application/json");
+            } else {
+                res.status = 500;
+                res.set_content(json{{"error", "Internal Server Error"}}.dump(), "application/json");
+            }
         } else {
             res.status = 404;
             res.set_content(json{{"error", "Not found"}}.dump(), "application/json");
@@ -154,7 +172,7 @@ void setupRoutes(httplib::Server& svr) {
     });
 
     // 获取已入场车牌 (非bot用户可访问)
-    svr.Get("/api/vehicles/inside", [](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/api/vehicles_inside", [](const httplib::Request& req, httplib::Response& res) {
         std::string token = req.get_header_value("Authorization");
         std::string role, username;
         if (!Auth::getInstance().validateToken(token, role, username)) {
@@ -180,7 +198,7 @@ void setupRoutes(httplib::Server& svr) {
         res.set_content(json{{"plates", inside_plates}}.dump(), "application/json");
     });
 
-    // 管理员车辆进出
+    // 管理车辆
     svr.Post("/api/admin/vehicle", [](const httplib::Request& req, httplib::Response& res) {
         try {
             std::string token = req.get_header_value("Authorization");
@@ -221,6 +239,35 @@ void setupRoutes(httplib::Server& svr) {
                     Logger::logVehicle(plate, "admin_exit", "[Admin:" + username + "] Failed: " + msg);
                     res.set_content(json{{"result", "fail"}, {"message", msg}}.dump(), "application/json");
                 }
+            } else if (action == "addMonthly") {
+                int days = body["days"];
+                std::cout << days << std::endl;
+                std::string msg;
+                if (VehicleManager::addMonthly(plate, days, msg)) {
+                    Logger::logVehicle(plate, "add_monthly", "[Admin:" + username + "] " + msg);
+                    res.set_content(json{{"result", "success"}, {"message", msg}}.dump(), "application/json");
+                } else {
+                    Logger::logVehicle(plate, "add_monthly", "[Admin:" + username + "] Failed: " + msg);
+                    res.set_content(json{{"result", "fail"}, {"message", msg}}.dump(), "application/json");
+                }
+            } else if (action == "addBlacklist") {
+                std::string msg;
+                if (VehicleManager::addBlacklist(plate, msg)) {
+                    Logger::logVehicle(plate, "add_blacklist", "[Admin:" + username + "] " + msg);
+                    res.set_content(json{{"result", "success"}, {"message", msg}}.dump(), "application/json");
+                } else {
+                    Logger::logVehicle(plate, "add_blacklist", "[Admin:" + username + "] Failed: " + msg);
+                    res.set_content(json{{"result", "fail"}, {"message", msg}}.dump(), "application/json");
+                }
+            } else if (action == "removeBlacklist") {
+                std::string msg;
+                if (VehicleManager::removeBlacklist(plate, msg)) {
+                    Logger::logVehicle(plate, "remove_blacklist", "[Admin:" + username + "] " + msg);
+                    res.set_content(json{{"result", "success"}, {"message", msg}}.dump(), "application/json");
+                } else {
+                    Logger::logVehicle(plate, "remove_blacklist", "[Admin:" + username + "] Failed: " + msg);
+                    res.set_content(json{{"result", "fail"}, {"message", msg}}.dump(), "application/json");
+                }
             } else {
                 res.status = 400;
                 res.set_content(json{{"error", "Invalid action"}}.dump(), "application/json");
@@ -232,7 +279,44 @@ void setupRoutes(httplib::Server& svr) {
     });
 }
 
+bool checkVehiclesJSON() {
+    std::ifstream vehicles_file("vehicles.json");
+    if (!vehicles_file.is_open()) {
+        std::cout << "vehicles.json not found, creating a new one." << std::endl;
+        std::ofstream emptyFile("vehicles.json");
+        if (emptyFile.is_open()) {
+            emptyFile << "{}";
+            emptyFile.close();
+        } else {
+            std::cerr << "Error: Could not create vehicles.json." << std::endl;
+        }
+    }
+    return true;
+}
+
+bool checkUsersJSON() {
+    std::ifstream users_file("users.json");
+    if (!users_file.is_open()) {
+        std::cerr << "users.json not found, please create it yourself." << std::endl;
+        return false;
+    }
+    return true;
+}
+
+bool checkConfigJSON() {
+    std::ifstream config_file("config.json");
+    if (!config_file.is_open()) {
+        std::cerr << "config.json not found, please create it yourself." << std::endl;
+        return false;
+    }
+    return true;
+}
+
 int main() {
+    // 检查配置文件
+    if (!checkVehiclesJSON() || !checkUsersJSON() || !checkConfigJSON()) {
+        return 1;
+    }
     httplib::Server svr;
     setupRoutes(svr);
     std::ifstream config_file("config.json");

@@ -1,0 +1,19 @@
+{
+    "AB-01-01": {
+        "entry_time": "2025-04-14T17:43:04",
+        "history_entries": [
+            "2025-04-14T16:03:57",
+            "2025-04-14T16:04:30",
+            "2025-04-14T17:43:04"
+        ],
+        "history_exits": [
+            "2025-04-14T16:04:14",
+            "2025-04-14T16:04:39"
+        ],
+        "is_blacklisted": false,
+        "is_inside": true,
+        "is_monthly": true,
+        "license_plate": "AB-01-01",
+        "monthly_expiry": "2028-02-12 11:33:10"
+    }
+}
