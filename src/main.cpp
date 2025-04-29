@@ -132,14 +132,15 @@ void setupRoutes(httplib::Server& svr) {
         json vehicle_info;
         if (vehicles.contains(plate)) {
             vehicle_info = vehicles[plate];
-            if (VehicleManager::getDuration(plate, time, duration, fee, msg)) {
+            if (vehicle_info["is_inside"] == true) {
+                VehicleManager::getDuration(plate, time, duration, fee, msg);
                 vehicle_info["duration"] = duration;
                 vehicle_info["fee"] = fee;
-                res.set_content(vehicle_info.dump(), "application/json");
             } else {
                 res.status = 500;
                 res.set_content(json{{"error", "Internal Server Error"}}.dump(), "application/json");
             }
+            res.set_content(vehicle_info.dump(), "application/json");
         } else {
             res.status = 404;
             res.set_content(json{{"error", "Not found"}}.dump(), "application/json");
