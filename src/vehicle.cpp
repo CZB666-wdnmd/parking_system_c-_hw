@@ -30,7 +30,6 @@ bool VehicleManager::getDuration(const std::string& plate, const std::string& ti
         return false;
     }
 
-    double fee;
     std::string effective_entry = v["entry_time"];
     if (v["is_monthly"] == true) {
         std::string monthly_expiry = v["monthly_expiry"];
@@ -112,7 +111,6 @@ bool VehicleManager::exit(const std::string& plate, const std::string& time, dou
     }
 
     //计算费用
-    double fee;
     if (v["is_monthly"] == true) {
         std::string monthly_expiry = v["monthly_expiry"];
         // 如果出场时间小于或等于月卡到期时间，则免费出场
