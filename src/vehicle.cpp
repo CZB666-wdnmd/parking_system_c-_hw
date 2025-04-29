@@ -26,10 +26,11 @@ bool VehicleManager::getDuration(const std::string& plate, const std::string& ti
     double stagePrice = config["fee_stage_price"];
     double dayTop = config["fee_day_top"];
 
-    if (v["is_inside"] != true || !vehicles.contains(plate)) {
+    if (!vehicles.contains(plate) || v["is_inside"] != true) {
         return false;
     }
 
+    double fee;
     std::string effective_entry = v["entry_time"];
     if (v["is_monthly"] == true) {
         std::string monthly_expiry = v["monthly_expiry"];
@@ -105,12 +106,13 @@ bool VehicleManager::exit(const std::string& plate, const std::string& time, dou
     auto vehicles = db.getVehicles();
     auto& v = vehicles[plate];
     
-    if (v["is_inside"] != true || !vehicles.contains(plate)) {
+    if (!vehicles.contains(plate) || v["is_inside"] != true) {
         msg = "找不到车辆";
         return false;
     }
 
     //计算费用
+    double fee;
     if (v["is_monthly"] == true) {
         std::string monthly_expiry = v["monthly_expiry"];
         // 如果出场时间小于或等于月卡到期时间，则免费出场
